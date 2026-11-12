@@ -156,6 +156,9 @@ void CtrlServer::Tick100ms()
 	// DeviceTypeAndProperty every 2 seconds, Headamp-Message every 2 seconds (Names every 10 seconds)
 	mixer->fpga->AES50Tick();
 
+	// talk to the AES67 daemon
+	mixer->aes67->Tick100ms();
+
 	// if (startupCounter < 100)
 	// {
 	// 	startupCounter++;

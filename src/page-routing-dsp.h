@@ -219,7 +219,7 @@ class PageRoutingDsp: public Page
                 {
 	 				if ((config->GetUint(ROUTING_DSP_OUTPUT, index) >= 1) && (config->GetUint(ROUTING_DSP_OUTPUT, index) <= 40)) {
 	 					// external signal from FPGA
-	 					lv_table_set_cell_value(objects.table_routing_dsp_output, index, 0, (config->GetParameter(ROUTING_FPGA)->GetFormatedValue(FPGA_OUTPUT_IDX_DSP - 1 + config->GetUint(ROUTING_DSP_OUTPUT, index) - 1) + " -> " + config->GetParameter(ROUTING_DSP_OUTPUT)->GetFormatedValue(index)).c_str());
+	 					lv_table_set_cell_value(objects.table_routing_dsp_output, index, 0, (Aes67Patch::RoutingLabel(config, FPGA_OUTPUT_IDX_DSP - 1 + config->GetUint(ROUTING_DSP_OUTPUT, index) - 1) + " -> " + config->GetParameter(ROUTING_DSP_OUTPUT)->GetFormatedValue(index)).c_str());
 	 				}else{
 	 					// internal signal within DSP
 	 					lv_table_set_cell_value(objects.table_routing_dsp_output, index, 0, config->GetParameter(ROUTING_DSP_OUTPUT)->GetFormatedValue(index).c_str());

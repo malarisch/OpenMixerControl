@@ -230,8 +230,12 @@ namespace OMC
                         case FPGA_INPUT_IDX_DSP_RETURN + 32 ... (FPGA_INPUT_IDX_AES50A - 1):
                             result += String("DSP AuxOut ") + (chan - (FPGA_INPUT_IDX_DSP_RETURN + 32) + 1);
                             break;
-                        case FPGA_INPUT_IDX_AES50A ... (FPGA_INPUT_IDX_AES50B - 1):
+                        case FPGA_INPUT_IDX_AES50A ... (FPGA_INPUT_IDX_AES67 - 1):
                             result += String("AES50A In ") + (chan - FPGA_INPUT_IDX_AES50A + 1);
+                            break;
+                        case FPGA_INPUT_IDX_AES67 ... (FPGA_INPUT_IDX_AES67 + AES67_INPUTS_MAX - 1):
+                            // the pages show the patched stream instead (Aes67Patch::SourceName)
+                            result += String("AES67 In ") + (chan - FPGA_INPUT_IDX_AES67 + 1);
                             break;
                         case FPGA_INPUT_IDX_AES50B ... (FPGA_INPUT_IDX_AES50B + 48 - 1):
                             result += String("AES50B In ") + (chan - FPGA_INPUT_IDX_AES50B + 1);

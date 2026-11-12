@@ -499,8 +499,29 @@ enum class MP_ID {
     DMX_ARTNET_VALUE = 279,
     //DMX_ARTNET_OFFSET,
 
+    // AES67
+    AES67_ONLINE = 280,             // connection to aes67d is up
+    AES67_DISCOVERED_COUNT = 281,   // number of streams found on the network
+    AES67_DISCOVERED_STREAM = 282,  // stream descriptor "ip:port/channels/samples per packet"
+    AES67_DISCOVERED_NAME = 283,    // session name
+    AES67_INPUT_STREAM = 284,       // stream descriptor patched to an AES67 input ("" = none)
+    AES67_INPUT_NAME = 285,         // session name of that stream
+    AES67_INPUT_CHANNEL = 286,      // channel of that stream (zero based)
+    AES67_RX_DELAY = 287,           // receive delay (link offset beyond two packet times) in samples
+    AES67_TX_CHANNELS = 288,        // channels of a transmit stream (0 = stream is off)
+    AES67_TX_ADDRESS = 289,         // multicast address of a transmit stream ("" = automatic)
+    AES67_TX_NAME = 290,            // session name of a transmit stream ("" = automatic)
+    AES67_TX_ACTIVE_ADDRESS = 291,  // address the transmit stream is really sent to ("" = not sent)
+
+    // configuration of the loaded core, read from it by the server (0 = not known, no connection)
+    AES67_TX_STREAMS = 292,         // transmit streams
+    AES67_TX_OUTPUTS = 293,         // transmit channels
+    AES67_RX_STREAMS = 294,         // receive streams
+    AES67_RX_INPUTS = 295,          // receive channels
+    AES67_RX_BUFFER = 296,          // samples the core buffers per receive channel
+
     // Next free Number
-    __ELEMENT_COUNTER_DO_NOT_MOVE = 280
+    __ELEMENT_COUNTER_DO_NOT_MOVE = 297
 
 
     // !!!!!!!!!!!!!!!!!!!!  Danger Zone  !!!!!!!!!!!!!!!!!!

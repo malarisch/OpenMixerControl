@@ -10,6 +10,7 @@
 #include "page-baseparameter.h"
 #include "mixer.h"
 #include "pagebindings.h"
+#include "aes67-patch.h"
 
 #include "eez/screens.h"
 #include "eez/images.h"

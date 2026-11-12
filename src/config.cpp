@@ -424,6 +424,71 @@ namespace OMC
         ->DefHideEncoderSlider()
         ->DefMinMaxStandard_Uint(0, NUM_INPUT_CHANNEL, 0); // 161 = OFF + 160 channels
 
+        // AES67: the server fills the list of discovered streams, the routing page patches
+        // streams to the AES67 inputs of the FPGA, the server subscribes what is patched and routed.
+        DefParameter(AES67_ONLINE, cat, "AES67 Online")
+        ->DefStandard_Bool(false)
+        ->DefNoConfig();
+
+        DefParameter(AES67_DISCOVERED_COUNT, cat, "AES67 Streams")
+        ->DefMinMaxStandard_Uint(0, AES67_DISCOVERED_MAX, 0)
+        ->DefNoConfig();
+
+        DefParameter(AES67_DISCOVERED_STREAM, cat, "AES67 Stream", AES67_DISCOVERED_MAX)
+        ->DefStandard_StringPlain("")
+        ->DefNoConfig();
+
+        DefParameter(AES67_DISCOVERED_NAME, cat, "AES67 Stream Name", AES67_DISCOVERED_MAX)
+        ->DefStandard_StringPlain("")
+        ->DefNoConfig();
+
+        DefParameter(AES67_INPUT_STREAM, cat, "AES67 Input Stream", AES67_INPUTS_MAX)
+        ->DefStandard_StringPlain("");
+
+        DefParameter(AES67_INPUT_NAME, cat, "AES67 Input Name", AES67_INPUTS_MAX)
+        ->DefStandard_StringPlain("");
+
+        DefParameter(AES67_INPUT_CHANNEL, cat, "AES67 Input Channel", AES67_INPUTS_MAX)
+        ->DefMinMaxStandard_Uint(0, AES67_INPUTS_MAX - 1, 0);
+
+        DefParameter(AES67_RX_DELAY, cat, "AES67 RX Delay")
+        ->DefMinMaxStandard_Uint(0, AES67_RX_DELAY_LIMIT, 0);
+
+        // AES67 transmit streams: the channels of all streams share the AES67 outputs of the FPGA (see aes67-patch.h)
+        DefParameter(AES67_TX_CHANNELS, cat, "AES67 TX Channels", AES67_TX_SLOTS_MAX)
+        ->DefMinMaxStandard_Uint(0, AES67_OUTPUTS_MAX, 0);
+
+        DefParameter(AES67_TX_ADDRESS, cat, "AES67 TX Address", AES67_TX_SLOTS_MAX)
+        ->DefStandard_StringPlain("");
+
+        DefParameter(AES67_TX_NAME, cat, "AES67 TX Name", AES67_TX_SLOTS_MAX)
+        ->DefStandard_StringPlain("");
+
+        DefParameter(AES67_TX_ACTIVE_ADDRESS, cat, "AES67 TX Active Address", AES67_TX_SLOTS_MAX)
+        ->DefStandard_StringPlain("")
+        ->DefNoConfig();
+
+        // what the loaded core has (read from the core, 0 = not known)
+        DefParameter(AES67_TX_STREAMS, cat, "AES67 TX Streams")
+        ->DefMinMaxStandard_Uint(0, AES67_TX_SLOTS_MAX, 0)
+        ->DefNoConfig();
+
+        DefParameter(AES67_TX_OUTPUTS, cat, "AES67 TX Channels of the Core")
+        ->DefMinMaxStandard_Uint(0, AES67_OUTPUTS_MAX, 0)
+        ->DefNoConfig();
+
+        DefParameter(AES67_RX_STREAMS, cat, "AES67 RX Streams")
+        ->DefMinMaxStandard_Uint(0, AES67_RX_SLOTS_MAX, 0)
+        ->DefNoConfig();
+
+        DefParameter(AES67_RX_INPUTS, cat, "AES67 RX Channels of the Core")
+        ->DefMinMaxStandard_Uint(0, AES67_INPUTS_MAX, 0)
+        ->DefNoConfig();
+
+        DefParameter(AES67_RX_BUFFER, cat, "AES67 RX Buffer")
+        ->DefMinMaxStandard_Uint(0, 65535, 0)
+        ->DefNoConfig();
+
         DefParameter(ROUTING_DSP_INPUT, cat, "Input", MAX_FPGA_TO_DSP1_CHANNELS) // 40 routable DSP-input channels from FPGA
         ->DefUOM(MP_UOM::DSP_ROUTING)
         ->DefHideEncoderSlider()

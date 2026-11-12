@@ -32,6 +32,7 @@ Mixer::Mixer(X32BaseParameter* basepar): X32Base(basepar) {
     dsp = new DSP1(basepar);
     adda = new Adda(basepar);
     card = new Card(basepar, adda);
+    aes67 = new Aes67(basepar);
 }
 
 void Mixer::Init() {
@@ -334,6 +335,9 @@ void Mixer::Sync()
             fpga->SendRoutingToFpga(changedIndex);
         }
     }
+
+    // AES67: streams follow the routing and the patch
+    aes67->Sync();
 
     // Output Delay
     if (config->HasParametersChanged({DELAY_DSP_OUTPUT}))

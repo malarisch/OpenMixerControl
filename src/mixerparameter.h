@@ -64,6 +64,7 @@ class Mixerparameter
         float stepsize = 1;
 
         bool value_string_autoincrement_zerobased = false;
+        bool value_string_plain = false;
 
         bool button_blink = false;
 
@@ -251,6 +252,23 @@ class Mixerparameter
             return this;
         }
 
+        /// @brief String parameter whose instances all start with the same text (no running number appended).
+        Mixerparameter* DefStandard_StringPlain(String standard) {
+            value_type = MP_VALUE_TYPE::STRING;
+
+            value_string_standard = standard;
+            value_string_plain = true;
+            hide_encoder_slider = true;
+            hide_encoder_reset = true;
+
+            for (uint i = 0; i < instances; i++)
+            {
+                value_string.push_back(value_string_standard);
+            }
+
+            return this;
+        }
+
         Mixerparameter* DefStepsize(float steps) {
             stepsize = steps;
 
@@ -412,7 +430,7 @@ class Mixerparameter
             
             if (value_type == MP_VALUE_TYPE::STRING)
             {
-                value_string[index] = value_string_standard + String(index);
+                value_string[index] = value_string_plain ? value_string_standard : value_string_standard + String(index);
             }
             else
             {
@@ -810,16 +828,22 @@ class Mixerparameter
             return value_string;
         }
 
+        // Values of a scene file. The number of instances stays as it is defined: a scene with
+        // fewer values (older version, cut file) leaves the rest untouched, values beyond are dropped.
         void Config_SetValue(vector<float> newvalues)
         {
-            value.clear();
-            copy(newvalues.begin(), newvalues.end(), back_inserter(value));
+            for (size_t i = 0; (i < newvalues.size()) && (i < value.size()); i++)
+            {
+                value[i] = newvalues[i];
+            }
         }
 
         void Config_SetValueString(vector<String> newvalues_string)
         {
-            value_string.clear();
-            copy(newvalues_string.begin(), newvalues_string.end(), back_inserter(value_string));
+            for (size_t i = 0; (i < newvalues_string.size()) && (i < value_string.size()); i++)
+            {
+                value_string[i] = newvalues_string[i];
+            }
         }
 
         bool IsOSC()

@@ -17,6 +17,7 @@
 #include "fpga.h"
 #include "adda.h"
 #include "card.h"
+#include "aes67.h"
 
 using namespace std;
 using enum MP_ID;
@@ -39,6 +40,7 @@ class Mixer : public X32Base
         Adda* adda;
         Card* card;
         DSP1* dsp;
+        Aes67* aes67;
 
         String debugText;
 
