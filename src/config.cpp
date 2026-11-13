@@ -419,10 +419,10 @@ namespace OMC
 
         cat = MP_CAT::ROUTING;
 
-        DefParameter(ROUTING_FPGA, cat, "Routing FPGA", 208)  // 208 -> size of fpga routing struct! (prepared for both AES50-ports, but only 160 are used at the moment)
+        DefParameter(ROUTING_FPGA, cat, "Routing FPGA", 208)  // 208 -> size of fpga routing struct! (192 are used at the moment: 160 + 32 AES67 channels)
         ->DefUOM(MP_UOM::FPGA_ROUTING)
         ->DefHideEncoderSlider()
-        ->DefMinMaxStandard_Uint(0, NUM_INPUT_CHANNEL, 0); // 161 = OFF + 160 channels
+        ->DefMinMaxStandard_Uint(0, NUM_INPUT_CHANNEL, 0); // OFF + all sources of the matrix
 
         // AES67: the server fills the list of discovered streams, the routing page patches
         // streams to the AES67 inputs of the FPGA, the server subscribes what is patched and routed.

@@ -230,7 +230,7 @@ namespace OMC
                         case FPGA_INPUT_IDX_DSP_RETURN + 32 ... (FPGA_INPUT_IDX_AES50A - 1):
                             result += String("DSP AuxOut ") + (chan - (FPGA_INPUT_IDX_DSP_RETURN + 32) + 1);
                             break;
-                        case FPGA_INPUT_IDX_AES50A ... (FPGA_INPUT_IDX_AES67 - 1):
+                        case FPGA_INPUT_IDX_AES50A ... (FPGA_INPUT_IDX_AES50A + 48 - 1):
                             result += String("AES50A In ") + (chan - FPGA_INPUT_IDX_AES50A + 1);
                             break;
                         case FPGA_INPUT_IDX_AES67 ... (FPGA_INPUT_IDX_AES67 + AES67_INPUTS_MAX - 1):

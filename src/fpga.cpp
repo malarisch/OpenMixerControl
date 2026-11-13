@@ -93,7 +93,7 @@ uint8_t Fpga::GetInputIndex(uint8_t group, uint8_t channel) {
 	// 65-72 = AUX-inputs
 	// 73-112 = DSP-outputs
 	// 113-160 = AES50A-inputs
-	// 161-208 = AES50B-inputs
+	// 161-192 = AES67-inputs
 
 	if (channel == 0){
 		return 0;
@@ -115,8 +115,10 @@ uint8_t Fpga::GetInputIndex(uint8_t group, uint8_t channel) {
 		case 'A': // AES50A-Inputs 1-48
 			return channel + 112;
 			break;
-		case 'B': // AES50B-Inputs 1-48
+		case 'N': // AES67 1-32
 			return channel + 160;
+		case 'B': // AES50B 1-48
+			return channel + 192;
 			break;
 	}
 
@@ -131,7 +133,8 @@ uint8_t Fpga::GetOutputIndex(uint8_t group, uint8_t channel) {
 	// 65-72 = AUX-outputs
 	// 73-112 = DSP-inputs
 	// 113-160 = AES50A-outputs
-	// 161-208 = AES50B-outputs
+	// 161-192 = AES67-outputs
+	// 193-240 = AES50B-outputs
 
 	if (channel == 0){
 		return 0;
@@ -156,8 +159,10 @@ uint8_t Fpga::GetOutputIndex(uint8_t group, uint8_t channel) {
 		case 'A': // AES50A-Inputs 1-48
 			return channel + 112;
 			break;
-		case 'B': // AES50B-Inputs 1-48
+		case 'N': // AES67 1-32
 			return channel + 160;
+		case 'B': // AES50B 1-48
+			return channel + 192;
 			break;
 	}
 
@@ -172,7 +177,8 @@ void Fpga::GetInputGroupAndChannelByIndex(uint8_t sourceIndex, uint8_t* group, u
 	// 65-72 = AUX-inputs
 	// 73-112 = DSP-return
 	// 113-160 = AES50A-inputs
-	// 161-208 = AES50B-inputs
+	// 161-192 = AES67-inputs
+	// 193-240 = AES50B-inputs
 
 	if (sourceIndex == 0) {
 		// OFF
@@ -193,9 +199,12 @@ void Fpga::GetInputGroupAndChannelByIndex(uint8_t sourceIndex, uint8_t* group, u
 	}else if ((sourceIndex >= 113) && ( sourceIndex <= 160)) {
 		*group = 'A';
 		*channel = sourceIndex - 112;
-	}else if ((sourceIndex >= 161) && ( sourceIndex <= 208)) {
-		*group = 'B';
+	}else if ((sourceIndex >= 161) && ( sourceIndex <= 192)) {
+		*group = 'N';
 		*channel = sourceIndex - 160;
+	}else if ((sourceIndex >= 193) && ( sourceIndex <= 240)) {
+		*group = 'B';
+		*channel = sourceIndex - 192;
 	}
 }
 
@@ -207,7 +216,8 @@ void Fpga::GetOutputGroupAndChannelByIndex(uint8_t outputIndex, uint8_t* group, 
 	// 65-72 = AUX-outputs
 	// 73-112 = DSP-inputs
 	// 113-160 = AES50A-outputs
-	// 161-208 = AES50B-outputs
+	// 161-192 = AES67-outputs
+	// 193-240 = AES50B-outputs
 
 	if (outputIndex == 0) {
 		*group = 0;
@@ -233,9 +243,12 @@ void Fpga::GetOutputGroupAndChannelByIndex(uint8_t outputIndex, uint8_t* group, 
 	}else if ((outputIndex >= 113) && ( outputIndex <= 160)) {
 		*group = 'A';
 		*channel = outputIndex - 112;
-	}else if ((outputIndex >= 161) && ( outputIndex <= 208)) {
-		*group = 'B';
+	}else if ((outputIndex >= 161) && ( outputIndex <= 192)) {
+		*group = 'N';
 		*channel = outputIndex - 160;
+	}else if ((outputIndex >= 193) && ( outputIndex <= 240)) {
+		*group = 'B';
+		*channel = outputIndex - 192;
 	}
 }
 
@@ -253,7 +266,8 @@ String Fpga::GetInputName(uint8_t group, uint8_t channel) {
 	//   65-72 = AUX-inputs
 	//  73-112 = DSP1 Return
 	// 113-160 = AES50A-inputs
-	// 161-208 = AES50B-inputs
+	// 161-192 = AES67-inputs
+	// 193-240 = AES50B-inputs
 
 	if (channel == 0){
 		return "Off";
@@ -270,6 +284,8 @@ String Fpga::GetInputName(uint8_t group, uint8_t channel) {
 			return String("DSP1 Return ") + String(channel);
 		case 'A': // AES50A-Inputs 1-48
 			return String("AES50A In ") + String(channel);
+		case 'N': // AES67-Inputs 1-32
+			return String("AES67 In ") + String(channel);
 		case 'B': // AES50B-Inputs 1-48
 			return String("AES50B In ") + String(channel);
 	}
@@ -293,7 +309,8 @@ String Fpga::GetOutputName(uint8_t group, uint8_t channel) {
 	// 65-72 = AUX-outputs
 	// 73-112 = DSP-inputs
 	// 113-160 = AES50A-outputs
-	// 161-208 = AES50B-outputs
+	// 161-192 = AES67-outputs
+	// 193-240 = AES50B-outputs
 
 	if (channel == 0) {
 		return "Off";
@@ -321,6 +338,8 @@ String Fpga::GetOutputName(uint8_t group, uint8_t channel) {
 			return "DSP In " + String(channel);
 		case 'A':
 			return "AES50A Out " + String(channel);
+		case 'N':
+			return "AES67 Out " + String(channel);
 		case 'B':
 			return "AES50B Out " + String(channel);
 	}

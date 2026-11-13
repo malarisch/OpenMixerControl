@@ -1191,7 +1191,7 @@ TEST_CASE("AES67 patch")
         CHECK(stereo.port == 5004);
         CHECK(stereo.Descriptor() == String("239.1.0.9:5004/2/48"));
         CHECK(!Aes67Stream::Parse("").Valid());
-        CHECK(!Aes67Stream::Parse("239.1.0.9:5004/16/48").Valid());
+        CHECK(!Aes67Stream::Parse("239.1.0.9:5004/33/48").Valid());
     }
 
     SUBCASE("nothing routed, nothing received")

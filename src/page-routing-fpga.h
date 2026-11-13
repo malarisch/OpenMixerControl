@@ -441,14 +441,17 @@ class PageRoutingFpga: public Page
                         case FPGA_INPUT_IDX_DSP_RETURN ... FPGA_INPUT_IDX_DSP_RETURN + 39:
                             selection_source = 3;
                             break;
-                        case FPGA_INPUT_IDX_AES50A ... FPGA_INPUT_IDX_AES67 - 1:
+                        case FPGA_INPUT_IDX_AES50A ... FPGA_INPUT_IDX_AES50A + 47:
                             selection_source = 4;
                             break;
                         case FPGA_INPUT_IDX_AES67 ... FPGA_INPUT_IDX_AES67 + AES67_INPUTS_MAX - 1:
                             {
-                                // the stream of the AES67 input; an input without stream belongs to the AES50 A block
+                                // the stream of the AES67 input; an input without stream has no entry in the roller
                                 int source = (aes67_input >= 0) ? FindSource(Aes67Patch::InputStream(config, aes67_input)) : -1;
-                                selection_source = (source >= 0) ? (int)(fixed_sources + source) : 4;
+                                if (source >= 0)
+                                {
+                                    selection_source = fixed_sources + source;
+                                }
                             }
                             break;
                         default:

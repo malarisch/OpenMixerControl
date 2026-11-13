@@ -112,7 +112,7 @@ typedef unsigned int uint;
 
 #define MAX_CHAN_EQS                       4  // amount of EQs per Channel
 
-#define NUM_INPUT_CHANNEL                  160 // just use a single AES50-port for now
+#define NUM_INPUT_CHANNEL                  192 // 160 + 32 channels of the AES67 core 
 #define NUM_OUTPUT_CHANNEL                 NUM_INPUT_CHANNEL
 #define MAX_FPGA_TO_DSP1_CHANNELS          40
 #define MAX_DSP1_TO_FPGA_CHANNELS          40
@@ -129,19 +129,19 @@ typedef unsigned int uint;
 #define FPGA_INPUT_IDX_TALKBACK_EXT		72
 #define FPGA_INPUT_IDX_DSP_RETURN		73
 #define FPGA_INPUT_IDX_AES50A			113
-#define FPGA_INPUT_IDX_AES50B			161
+#define FPGA_INPUT_IDX_AES50B			193
 
 // AES67 core in the FPGA (network on the AES50B PHY).
 // The receive channels of the core are ordinary sources of the routing matrix.
-// In the current bitstream they take the place of "AES50A In 41-48".
+// They have their own four TDM lines behind AES50A (channels 161-192 of the matrix).
 //
 // Only the places in the routing matrix are fixed here. How many streams and channels
 // the loaded core has and how deep its buffer is, the server reads from the core
 // (Mixerparameters AES67_RX_*/AES67_TX_*, see Aes67Patch::Inputs() and its neighbours).
 // The *_MAX values are the sizes of the tables, not the configuration of the core.
-#define FPGA_INPUT_IDX_AES67			153
-#define AES67_INPUTS_MAX				8   // table size: receive channels (up to the next block of the matrix, AES50B)
-#define AES67_RX_SLOTS_MAX				16  // table size: receive streams
+#define FPGA_INPUT_IDX_AES67			161
+#define AES67_INPUTS_MAX				32  // table size: receive channels (up to the next block of the matrix, AES50B)
+#define AES67_RX_SLOTS_MAX				32  // table size: receive streams
 #define AES67_DISCOVERED_MAX			16  // streams offered in the routing page
 #define AES67_RX_DELAY_LIMIT			1024 // range of the Mixerparameter; what the core can do depends on its buffer
 
@@ -152,11 +152,11 @@ typedef unsigned int uint;
 #define FPGA_OUTPUT_IDX_AUX				65
 #define FPGA_OUTPUT_IDX_DSP     		73
 #define FPGA_OUTPUT_IDX_AES50A			113
-#define FPGA_OUTPUT_IDX_AES50B			161
+#define FPGA_OUTPUT_IDX_AES50B			193
 
-// Transmit channels of the AES67 core. In the current bitstream they are fed by "AES50A Out 1-...".
-#define FPGA_OUTPUT_IDX_AES67			113
-#define AES67_OUTPUTS_MAX				16  // table size: transmit channels
+// Transmit channels of the AES67 core: outputs 161-192 of the matrix, behind AES50A.
+#define FPGA_OUTPUT_IDX_AES67			161
+#define AES67_OUTPUTS_MAX				32  // table size: transmit channels
 #define AES67_TX_SLOTS_MAX				16  // table size: transmit streams
 #define AES67_TX_SAMPLES				48  // samples per packet: 1ms, the packet time every AES67 device knows
 
