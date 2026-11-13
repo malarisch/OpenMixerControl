@@ -156,7 +156,7 @@ class Helper
         String MixerparameterAction2String(MixerparameterAction action);
         String MixerparameterCategoryToString(MP_CAT cat);
 
-        String getIpAddress();
+        String getIpAddress(const char* interfaceName = "eth0");
 
         bool IsInChannelBlock(uint8_t index, X32_VCHANNEL_BLOCK block);
 

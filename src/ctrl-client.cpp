@@ -281,6 +281,9 @@ void CtrlClient::Tick100ms()
 
 			if (config->HasDisplay())
 			{
+				const char* ipText = ipAddress.length() > 0 ? ipAddress.c_str() : "-";
+				lv_label_set_text_fmt(objects.header_ip, "IP: %s", ipText);
+				lv_label_set_text(objects.setup_ipaddresstext, ipText);
 			}
 		}
     }

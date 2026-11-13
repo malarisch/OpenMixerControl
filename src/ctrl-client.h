@@ -31,7 +31,7 @@ class CtrlClient : public X32Base
         Surface* surface;
         OscClient* osc_client;
 
-        String ipAddress;
+        String ipAddress = "?";     // last address shown in the GUI ("?" = nothing shown yet)
 
         OMCBankId preSpillLoadedBank = OMCBankId::None;
 
