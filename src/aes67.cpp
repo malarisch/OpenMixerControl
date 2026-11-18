@@ -40,6 +40,7 @@
 #define AES67D_RETRY_TICKS      20  // 2 seconds between two connection attempts
 #define AES67D_ERROR_TICKS      50  // 5 seconds before the streams are set again after the daemon refused one
 #define AES67D_ADDRESS_TICKS    50  // 5 seconds between two questions for the address of the core
+#define AES67_PTP_TICKS         10  // 1 second between two questions to ptp4l
 #define AES67D_RX_BUFFER_MAX    (256 * 1024)
 
 // Build configuration of the receive and of the transmit path of the core:
@@ -241,6 +242,18 @@ void Aes67::Tick100ms()
         return;
     }
 
+    // ptp4l runs beside the daemon: its state is shown whether the daemon is there or not
+    if (ptpTicks > 0)
+    {
+        ptpTicks--;
+    }
+    else
+    {
+        ptpTicks = AES67_PTP_TICKS - 1;
+        ptp.Poll();
+        PublishPtp();
+    }
+
     if (waitTicks > 0)
     {
         waitTicks--;
@@ -382,6 +395,7 @@ void Aes67::Disconnect(const char* reason)
     }
     ClearDiscovered(0);
     ClearTxActive();
+    SetString(AES67_CORE_ADDRESS, "", 0);
 
     // another bitstream may be loaded until the daemon is back
     haveRxConfig = false;
@@ -666,7 +680,13 @@ void Aes67::HandleLine(const std::string& text)
     else if (line.result->Ok && (line.result->Ok->kind == "ip"))
     {
         std::string address;
-        if (ReadJson(address, line.result->Ok->data.str) && (ownAddress != String(address.c_str())))
+        bool valid = ReadJson(address, line.result->Ok->data.str);
+        if (valid)
+        {
+            // for the setup page (cleared while the daemon is away, so it is set on every answer)
+            SetString(AES67_CORE_ADDRESS, String(address.c_str()), 0);
+        }
+        if (valid && (ownAddress != String(address.c_str())))
         {
             ownAddress = String(address.c_str());
             helper->Log("AES67: address of the core is %s\n", address.c_str());
@@ -680,6 +700,37 @@ void Aes67::SetCore(MP_ID mp, uint value)
     if (config->GetUint(mp) != value)
     {
         config->Set(mp, (float)value);
+    }
+}
+
+void Aes67::SetInt(MP_ID mp, int64_t value)
+{
+    if (value > AES67_PTP_NS_LIMIT)
+    {
+        value = AES67_PTP_NS_LIMIT;
+    }
+    else if (value < -AES67_PTP_NS_LIMIT)
+    {
+        value = -AES67_PTP_NS_LIMIT;
+    }
+    if (config->GetInt(mp) != (int)value)
+    {
+        config->Set(mp, (float)value);
+    }
+}
+
+void Aes67::PublishPtp()
+{
+    const PtpStatus::Info& info = ptp.Get();
+
+    SetString(AES67_PTP_STATE, info.online ? String(PtpStatus::StateName(info.state)) : String(""), 0);
+    SetString(AES67_PTP_LEADER, info.online ? String(PtpStatus::IdentityToString(info.leader).c_str()) : String(""), 0);
+    SetInt(AES67_PTP_OFFSET, info.online ? info.offsetNs : 0);
+    SetInt(AES67_PTP_PATH_DELAY, info.online ? info.pathDelayNs : 0);
+    SetInt(AES67_PTP_FREQUENCY, info.haveFrequency ? info.frequencyPpb : 0);
+    if (config->GetBool(AES67_PTP_FREQUENCY_VALID) != info.haveFrequency)
+    {
+        config->Set(AES67_PTP_FREQUENCY_VALID, info.haveFrequency ? 1.0f : 0.0f);
     }
 }
 

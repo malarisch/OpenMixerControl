@@ -4,6 +4,7 @@
 
 #include "base.h"
 #include "aes67-patch.h"
+#include "ptp-status.h"
 
 // AES67: connection to the AES67 daemon (aes67d) that controls the AES67 core in the FPGA.
 //
@@ -14,6 +15,9 @@
 //   dropped when the last one is gone
 // - keeps the transmit streams of the core in line with AES67_TX_*: a stream is sent
 //   as soon as it has channels
+//
+// - publishes the state of the core and of ptp4l (AES67_CORE_ADDRESS, AES67_PTP_*), for the
+//   setup page. ptp4l is asked directly (see ptp-status.h), the daemon knows nothing about it.
 //
 // The daemon talks newline-delimited JSON over a Unix socket and pushes events
 // (discovered streams, configured streams) after "subscribe_events".
@@ -86,6 +90,9 @@ class Aes67 : public X32Base
         uint addressTicks = 0;      // 100ms ticks until the address is asked for again
         String ownAddress = "";     // IP address of the core ("" = not known yet)
 
+        PtpStatus ptp;              // ptp4l
+        uint ptpTicks = 0;          // 100ms ticks until ptp4l is asked again
+
         void Connect();
         void Disconnect(const char* reason);
         void Receive();
@@ -96,6 +103,8 @@ class Aes67 : public X32Base
         bool SendRequest(const char* method);
         bool SendReadRegister(const char* name);
         void SetCore(MP_ID mp, uint value);
+        void SetInt(MP_ID mp, int64_t value);
+        void PublishPtp();
         void ClearCore();
         bool SendSetRxStream(uint id, const Slot& slot);
         bool SendStopRxStream(uint id);

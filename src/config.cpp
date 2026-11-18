@@ -489,6 +489,35 @@ namespace OMC
         ->DefMinMaxStandard_Uint(0, 65535, 0)
         ->DefNoConfig();
 
+        // state of the AES67 core and of ptp4l (filled by the server, shown in the setup page)
+        DefParameter(AES67_CORE_ADDRESS, cat, "AES67 Core Address")
+        ->DefStandard_StringPlain("")
+        ->DefNoConfig();
+
+        DefParameter(AES67_PTP_STATE, cat, "AES67 PTP State")
+        ->DefStandard_StringPlain("")
+        ->DefNoConfig();
+
+        DefParameter(AES67_PTP_LEADER, cat, "AES67 PTP Leader")
+        ->DefStandard_StringPlain("")
+        ->DefNoConfig();
+
+        DefParameter(AES67_PTP_OFFSET, cat, "AES67 PTP Offset")
+        ->DefMinMaxStandard_Int(-AES67_PTP_NS_LIMIT, AES67_PTP_NS_LIMIT, 0)
+        ->DefNoConfig();
+
+        DefParameter(AES67_PTP_PATH_DELAY, cat, "AES67 PTP Path Delay")
+        ->DefMinMaxStandard_Int(-AES67_PTP_NS_LIMIT, AES67_PTP_NS_LIMIT, 0)
+        ->DefNoConfig();
+
+        DefParameter(AES67_PTP_FREQUENCY, cat, "AES67 PTP Frequency Correction")
+        ->DefMinMaxStandard_Int(-AES67_PTP_NS_LIMIT, AES67_PTP_NS_LIMIT, 0)
+        ->DefNoConfig();
+
+        DefParameter(AES67_PTP_FREQUENCY_VALID, cat, "AES67 PTP Frequency Correction Valid")
+        ->DefStandard_Bool(false)
+        ->DefNoConfig();
+
         DefParameter(ROUTING_DSP_INPUT, cat, "Input", MAX_FPGA_TO_DSP1_CHANNELS) // 40 routable DSP-input channels from FPGA
         ->DefUOM(MP_UOM::DSP_ROUTING)
         ->DefHideEncoderSlider()

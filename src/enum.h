@@ -520,8 +520,17 @@ enum class MP_ID {
     AES67_RX_INPUTS = 295,          // receive channels
     AES67_RX_BUFFER = 296,          // samples the core buffers per receive channel
 
+    // state of the AES67 core and of ptp4l, for the setup page
+    AES67_CORE_ADDRESS = 297,       // IP address of the core ("" = not known)
+    AES67_PTP_STATE = 298,          // state of the PTP port, e.g. "Follower" ("" = ptp4l does not answer)
+    AES67_PTP_LEADER = 299,         // clock identity of the current leader (grandmaster)
+    AES67_PTP_OFFSET = 300,         // offset from the leader in ns
+    AES67_PTP_PATH_DELAY = 301,     // mean path delay in ns
+    AES67_PTP_FREQUENCY = 302,      // frequency correction in ppb, as ptp4l logs it
+    AES67_PTP_FREQUENCY_VALID = 303, // the frequency correction could be read
+
     // Next free Number
-    __ELEMENT_COUNTER_DO_NOT_MOVE = 297
+    __ELEMENT_COUNTER_DO_NOT_MOVE = 304
 
 
     // !!!!!!!!!!!!!!!!!!!!  Danger Zone  !!!!!!!!!!!!!!!!!!
