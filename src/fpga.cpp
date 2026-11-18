@@ -360,49 +360,24 @@ void Fpga::SendRoutingToFpga(int channel) {
 		return;
 	}
 
-	uint8_t txData[2];
-	uint8_t rxData[2];
-
-	// FPGA expects data in this format:
-	// 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0
-	// |------- DATA ------||---- ADDR ----|
-
+	// routing matrix of OpenAudioFPGA on the control bus: one register per destination
+	// (FPGA_REG_ROUTING + 4 * destination), value = source (0 = off)
 	if ((channel >= 0) && (channel < 208))
 	{
 		// send only one routing-data to FPGA
-
-		txData[0] = (uint8_t)config->GetUint(ROUTING_FPGA, channel);
-		txData[1] = channel;
-
 		helper->DEBUG_FPGA(DEBUGLEVEL_NORMAL, "SendRoutingToFpga() %s -> %s",
 			config->GetParameter(ROUTING_FPGA)->GetFormatedValue(channel).c_str(),
 			GetOutputNameByIndex(channel+1).c_str()
 		);
-
-		spi->SendFpgaData(&txData[0], &rxData[0], 2);
-
-		if ((rxData[0] != txData[0]) || (rxData[1] != txData[1]))
-		{
-			// FPGA is sending the same data back to the i.MX25 at the moment so check the received values against the sent values
-			helper->Error("FPGA-Routing: Received values (0x%02x 0x%02x) does not match the sent values (0x%02x 0x%02x)\n", rxData[0], rxData[1], txData[0], txData[1]);
-		}
+		spi->WriteFpgaRegister(FPGA_REG_ROUTING + 4 * channel, config->GetUint(ROUTING_FPGA, channel));
 	}
 	else
 	{
 		// send all routing-data to FPGA
-
+		helper->DEBUG_FPGA(DEBUGLEVEL_TRACE, "send all routing data");
 		for (uint8_t i = 0; i < 208; i++)
 		{
-			helper->DEBUG_FPGA(DEBUGLEVEL_TRACE, "send routing data %d", channel+1);
-			txData[0] = (uint8_t)config->GetUint(ROUTING_FPGA, i);
-			txData[1] = i; 
-			spi->SendFpgaData(&txData[0], &rxData[0], 2);
-
-			if ((rxData[0] != txData[0]) || (rxData[1] != txData[1]))
-			{
-				// FPGA is sending the same data back to the i.MX25 at the moment so check the received values against the sent values
-				helper->Error("FPGA-Routing: Received values (0x%02x 0x%02x) does not match the sent values (0x%02x 0x%02x)\n", rxData[0], rxData[1], txData[0], txData[1]);
-			}
+			spi->WriteFpgaRegister(FPGA_REG_ROUTING + 4 * i, config->GetUint(ROUTING_FPGA, i));
 		}
 	}
 }
@@ -427,17 +402,7 @@ void Fpga::SetConfigBit(uint8_t bitNumber, bool value) {
 }
 
 void Fpga::SendConfig() {
-	uint8_t txData[2];
-	uint8_t rxData[2];
-	txData[0] = configData;
-	txData[1] = 255; // address
-	spi->SendFpgaData(&txData[0], &rxData[0], 2);
-
-	if ((rxData[0] != txData[0]) || (rxData[1] != txData[1]))
-	{
-		// FPGA is sending the same data back to the i.MX25 at the moment so check the received values against the sent values
-		helper->Error("FPGA-ConfigBits: Received values (0x%02x 0x%02x) does not match the sent values (0x%02x 0x%02x)\n", rxData[0], rxData[1], txData[0], txData[1]);
-	}
+	spi->WriteFpgaRegister(FPGA_REG_CORE_CONFIG, configData);
 }
 
 void Fpga::AES50SetPhantomPowerState(uint8_t aes50Port, uint8_t channel, bool phantomState) {

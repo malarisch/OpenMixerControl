@@ -21,7 +21,13 @@ typedef unsigned int uint;
 
 #define SPI_DEVICE_DSP1 "/dev/spidev0.0"
 #define SPI_DEVICE_DSP2 "/dev/spidev0.1"
-#define SPI_DEVICE_FPGA "/dev/spidev2.0"
+#define SPI_DEVICE_FPGA "/dev/spibone0"
+#define FPGA_LATTICE_SPI_MODE   SPI_MODE_0
+// registers of OpenAudioFPGA (byte addresses, OpenAudioFPGA litex_soc/build/*/csr.csv)
+#define FPGA_REG_CORE_INFO      0x00000800  // [7:0] TDM lines in, [15:8] out, [19:16] AES50 cores, [20] AES67 core, [31:24] platform
+#define FPGA_REG_CORE_VERSION   0x00000804
+#define FPGA_REG_CORE_CONFIG    0x00000808  // configuration bits (cfg_bits_o)
+#define FPGA_REG_ROUTING        0x80000000  // routing matrix: one word per destination, value = source (0 = off)
 #define MHz * 1000000
 #define SPI_FPGA_SPEED_HZ       8 MHz // works fine
 #define SPI_DSP_CONF_SPEED_HZ   1 MHz // during configuration the SPI-pins seem not to allow higher speeds
@@ -134,16 +140,12 @@ typedef unsigned int uint;
 // AES67 core in the FPGA (network on the AES50B PHY).
 // The receive channels of the core are ordinary sources of the routing matrix.
 // They have their own four TDM lines behind AES50A (channels 161-192 of the matrix).
-//
-// Only the places in the routing matrix are fixed here. How many streams and channels
-// the loaded core has and how deep its buffer is, the server reads from the core
-// (Mixerparameters AES67_RX_*/AES67_TX_*, see Aes67Patch::Inputs() and its neighbours).
-// The *_MAX values are the sizes of the tables, not the configuration of the core.
 #define FPGA_INPUT_IDX_AES67			161
 #define AES67_INPUTS_MAX				32  // table size: receive channels (up to the next block of the matrix, AES50B)
 #define AES67_RX_SLOTS_MAX				32  // table size: receive streams
 #define AES67_DISCOVERED_MAX			16  // streams offered in the routing page
 #define AES67_RX_DELAY_LIMIT			1024 // range of the Mixerparameter; what the core can do depends on its buffer
+#define AES67_PTP_NS_LIMIT				999999999 // range of the PTP values shown in the setup page (ns, ppb)
 
 #define FPGA_OUTPUT_IDX_OFF				0
 #define FPGA_OUTPUT_IDX_XLR				1

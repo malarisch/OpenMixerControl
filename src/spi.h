@@ -8,6 +8,8 @@
 #include "base.h"
 #include "spi-event.h"
 
+struct spi_ioc_transfer;
+
 // defines for FPGA-configuration via SPI
 #define PROG_B_GPIO_OFFSET      30
 #define DONE_GPIO_OFFSET        2
@@ -92,8 +94,14 @@ class SPI : public X32Base {
     std::list<SpiEvent*> eventBuffer;
 
     void toggleFpgaProgramnPin(uint32_t assertTime, uint32_t waitTime);
-    void setFpgaChipSelectPin(bool state);
     void setFpgaDonePin(bool state);
+
+    // FPGA control bus (spibone kernel driver, /dev/spibone0): raw SPI messages for the
+    // configuration (the chip select frames one message) and the bus state
+    int fpgaMessage(int* spi_fd, struct spi_ioc_transfer* xfers, uint32_t n, uint8_t mode);
+    bool setFpgaBusState(uint32_t busState);
+    int uploadBitstreamFpgaXilinx();
+    int uploadBitstreamFpgaLattice();
 
     int fpgaLatticeReadData(int* spi_fd, uint8_t cmd);
     uint32_t fpgaLatticeReverseByteOrder_uint32(uint32_t x);
@@ -116,7 +124,9 @@ class SPI : public X32Base {
     bool OpenConnectionDsps();
     bool CloseConnectionDsps();
 
-    bool SendFpgaData(uint8_t txData[], uint8_t rxData[], uint8_t len);
+    // registers of the FPGA control bus (byte addresses, see FPGA_REG_* in defines.h)
+    bool WriteFpgaRegister(uint32_t addr, uint32_t value);
+    bool ReadFpgaRegister(uint32_t addr, uint32_t* value);
 
     void QueueDspData(uint8_t dsp, uint8_t classId, uint8_t channel, uint8_t index, uint8_t valueCount, float values[]);
     void ProcessDspTxQueue(uint8_t dsp);

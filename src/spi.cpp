@@ -27,6 +27,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <linux/spi/spidev.h>
+#include "spibone_uapi.h"
 #include <linux/gpio.h>
 #include <fcntl.h>
 
@@ -41,7 +42,16 @@ SPI::SPI(X32BaseParameter* basepar) : X32Base(basepar) {}
 // accepts path to bitstream-file
 // returns 0 if sucecssul, -1 on errors
 // Xilinx FPGAs do *not* use ChipSelect during SPI Slave Programming!
+// The FPGA hangs off the control bus driver (spibone, /dev/spibone0): the configuration goes out
+// as raw SPI messages while the bus is in state "config"; afterwards the bus goes online (Wishbone
+// access, client devices such as the AES67 netdev) or, on failure, offline.
 int SPI::UploadBitstreamFpgaXilinx() {
+    int ret = uploadBitstreamFpgaXilinx();
+    setFpgaBusState(ret == 0 ? SPIBONE_STATE_ONLINE : SPIBONE_STATE_OFFLINE);
+    return ret;
+}
+
+int SPI::uploadBitstreamFpgaXilinx() {
 
     string filename_xilinx = app->get_option("--X")->as<string>();
 
@@ -66,14 +76,7 @@ int SPI::UploadBitstreamFpgaXilinx() {
     uint32_t spiSpeed = 2 * state->fpga_spi_speed; // Linux SPI driver seems to divide speed by 2
 
     helper->DEBUG_SPI(DEBUGLEVEL_NORMAL, "Connecting to SPI for FPGA...");
-    if (state->raspi)
-    {
-        spi_fd = open("/dev/spidev0.0", O_RDWR);
-    }
-    else
-    {
-        spi_fd = open(SPI_DEVICE_FPGA, O_RDWR);
-    }
+    spi_fd = open(SPI_DEVICE_FPGA, O_RDWR);
 
     if (spi_fd < 0)
     {
@@ -84,10 +87,17 @@ int SPI::UploadBitstreamFpgaXilinx() {
         return -1;
     }
 
-    // SPI-Modus (0 = CPOL=0, CPHA=0; Xilinx FPGAs oft Modus 0 oder 2)
-    ioctl(spi_fd, SPI_IOC_WR_MODE, &spiMode);
-    ioctl(spi_fd, SPI_IOC_WR_BITS_PER_WORD, &spiBitsPerWord);
-    ioctl(spi_fd, SPI_IOC_WR_MAX_SPEED_HZ, &spiSpeed);
+    // mode, word size and speed go with every message (SPI mode 0: CPOL=0, CPHA=0); raw messages
+    // only in bus state "config"
+    uint32_t busState = SPIBONE_STATE_CONFIG;
+    if (ioctl(spi_fd, SPIBONE_IOC_SET_STATE, &busState) < 0) {
+        helper->Error("Could not switch %s to configuration\n", SPI_DEVICE_FPGA);
+        close(spi_fd);
+        free(tx_buffer);
+        free(rx_buffer);
+        free(file_buffer);
+        return -1;
+    }
     helper->DEBUG_SPI(DEBUGLEVEL_NORMAL, "SPI-Bus '%s' initialized. (Mode %d, Speed %d Hz).", SPI_DEVICE_FPGA, spiMode, spiSpeed/2);
 
     // read bitstream-file and search for RAW-data
@@ -167,6 +177,7 @@ int SPI::UploadBitstreamFpgaXilinx() {
     tr.tx_buf = (unsigned long)tx_buffer;
     tr.rx_buf = (unsigned long)rx_buffer;
     tr.bits_per_word = spiBitsPerWord;
+    tr.speed_hz = spiSpeed;
     tr.cs_change = 0;
     tr.delay_usecs = 0;
 
@@ -179,7 +190,7 @@ int SPI::UploadBitstreamFpgaXilinx() {
     int current_progress;
     while ((bytes_read = fread(tx_buffer, 1, FPGA_BUFFER_SIZE, bitstream_file)) > 0) {
         tr.len = bytes_read;
-        ret = ioctl(spi_fd, SPI_IOC_MESSAGE(1), &tr);
+        ret = fpgaMessage(&spi_fd, &tr, 1, spiMode);
         if (ret < 0) {
             helper->Error("SPI-transmission failed\n");
             if (bitstream_file) fclose(bitstream_file);
@@ -218,7 +229,7 @@ int SPI::UploadBitstreamFpgaXilinx() {
         tx_buffer[i] = 0xFF;
         rx_buffer[i] = 0;
     }
-    ioctl(spi_fd, SPI_IOC_MESSAGE(1), &tr);
+    fpgaMessage(&spi_fd, &tr, 1, spiMode);
 */
     fclose(bitstream_file);
     close(spi_fd);
@@ -233,6 +244,12 @@ int SPI::UploadBitstreamFpgaXilinx() {
 // configures a Lattice ECP5 via SPI
 // returns 0 if successul, -1 on errors
 int SPI::UploadBitstreamFpgaLattice() {
+    int ret = uploadBitstreamFpgaLattice();
+    setFpgaBusState(ret == 0 ? SPIBONE_STATE_ONLINE : SPIBONE_STATE_OFFLINE);
+    return ret;
+}
+
+int SPI::uploadBitstreamFpgaLattice() {
 
     string filename_lattice = app->get_option("--L")->as<string>();
 
@@ -247,7 +264,7 @@ int SPI::UploadBitstreamFpgaLattice() {
 	uint32_t status;
     FILE *bitstream_file = NULL;
 
-    uint8_t spiMode = SPI_MODE_3; // both SPI_MODE_0 and SPI_MODE_3 can be used as the Lattice ECP5-FPGA is reading on rising edge
+    uint8_t spiMode = FPGA_LATTICE_SPI_MODE; // both SPI_MODE_0 and SPI_MODE_3 can be used as the Lattice ECP5-FPGA is reading on rising edge
     uint8_t spiBitsPerWord = 8;
     uint32_t spiSpeed = 2 * state->fpga_spi_speed; // Linux SPI driver seems to divide speed by 2
 
@@ -260,8 +277,13 @@ int SPI::UploadBitstreamFpgaLattice() {
         return -2; // Return Error-Code -2
     }
 
-    ioctl(spi_fd, SPI_IOC_WR_BITS_PER_WORD, &spiBitsPerWord);
-    ioctl(spi_fd, SPI_IOC_WR_MAX_SPEED_HZ, &spiSpeed);
+    // raw messages only in bus state "config" (the chip select frames each message)
+    uint32_t busState = SPIBONE_STATE_CONFIG;
+    if (ioctl(spi_fd, SPIBONE_IOC_SET_STATE, &busState) < 0) {
+        helper->Error("Could not switch %s to configuration\n", SPI_DEVICE_FPGA);
+        close(spi_fd);
+        return -2;
+    }
     helper->DEBUG_SPI(DEBUGLEVEL_NORMAL, "SPI-Bus '%s' initialized. (Mode %d, Speed %d Hz).", SPI_DEVICE_FPGA, spiMode, spiSpeed/2);
 
     if (helper->DEBUG_SPI(DEBUGLEVEL_NORMAL)){
@@ -311,7 +333,7 @@ int SPI::UploadBitstreamFpgaLattice() {
     // transmit large bitstream in chunks but without deasserting CS
     fseek(bitstream_file, 0, SEEK_SET); 
     const size_t CHUNK_SIZE = 1024; // 1 KB as maximum chunk-size
-    const int MAX_TRANSFERS = (int)(bitstream_size / CHUNK_SIZE) + 1;
+    const int MAX_TRANSFERS = (int)(bitstream_size / CHUNK_SIZE) + 2; // command + chunks
 	
 	// dynamic allocation of memory for the transfer-array
     struct spi_ioc_transfer *transfers = (spi_ioc_transfer*)calloc(MAX_TRANSFERS, sizeof(struct spi_ioc_transfer));
@@ -358,98 +380,70 @@ int SPI::UploadBitstreamFpgaLattice() {
         printf("\n-----------------------------------------\n\n");
     }
     
-    setFpgaChipSelectPin(true);
-
-    helper->DEBUG_SPI(DEBUGLEVEL_NORMAL, "Sending LSC_BITSTREAM_BURST");
-    fpgaLatticeTransferCommand(&spi_fd, CMD_LSC_BITSTREAM_BURST); // keep CS asserted after this command
-
-    // configure transfer
+    // LSC_BITSTREAM_BURST and the whole bitstream in ONE message: the chip select stays asserted
+    // from the command to the last byte (GPIO chip select of the bus driver)
+    helper->DEBUG_SPI(DEBUGLEVEL_NORMAL, "Sending LSC_BITSTREAM_BURST + bitstream");
+    uint8_t burst_cmd[4] = {CMD_LSC_BITSTREAM_BURST, 0x00, 0x00, 0x00};
     int num_transfers = 0;
+    transfers[num_transfers].tx_buf = (unsigned long)burst_cmd;
+    transfers[num_transfers].len = sizeof(burst_cmd);
+    transfers[num_transfers].bits_per_word = spiBitsPerWord;
+    transfers[num_transfers].speed_hz = spiSpeed;
+    num_transfers++;
+
     size_t current_offset = 0;
-    long total_bytes_sent = 0;
-    int progress_bar_width = 50;
-    int last_progress = -1;
-    int current_progress;
     while (current_offset < bitstream_size) {
         size_t len = bitstream_size - current_offset;
         if (len > CHUNK_SIZE) {
             len = CHUNK_SIZE;
         }
-
-		// get a temporary struct for the current transfer-element for configuration
-        struct spi_ioc_transfer tr;
-
-        tr.tx_buf = (unsigned long)(&bitstream_payload[current_offset]);
-        tr.rx_buf = (unsigned long)(&bitstream_payload[current_offset]); // Kein Rx erforderlich
-        tr.len = len;
-        tr.bits_per_word = spiBitsPerWord;
-        tr.cs_change = 0; // keep CS asserted between individual chunks, but deassert after last chunk. Behavior tested on RaspberryPi 4.
-        
-        int ret = ioctl(spi_fd, SPI_IOC_MESSAGE(1), &tr);
-        if (ret < 0) {
-            helper->Error("SPI-transmission failed\n");
-			free(bitstream_payload);
-			free(transfers);
-            if (spi_fd >= 0) close(spi_fd);
-            return -5; // return Error-Code -5
-        }
-
-        // calculate progress-bar
-        total_bytes_sent += len;
-        current_progress = (total_bytes_sent * 100) / bitstream_size;
-        if ((current_progress > (last_progress + 5)) || (total_bytes_sent == bitstream_size)) {
-            int progress = (int)((float)total_bytes_sent / bitstream_size * progress_bar_width);
-            printf("\rFPGA [");  //TODO implement with helper->Log()
-            for (int i = 0; i < progress_bar_width; ++i) {
-                if (i < progress) {
-                    printf("█");
-                }else{
-                    printf(" ");
-                }
-            }
-            printf("] %ld/%d Bytes (%u %%)", total_bytes_sent, bitstream_size, (uint)((total_bytes_sent * 100) / bitstream_size));
-            fflush(stdout);
-
-            last_progress = current_progress;
-        }
-
+        transfers[num_transfers].tx_buf = (unsigned long)(&bitstream_payload[current_offset]);
+        transfers[num_transfers].len = len;
+        transfers[num_transfers].bits_per_word = spiBitsPerWord;
+        transfers[num_transfers].speed_hz = spiSpeed;
+        transfers[num_transfers].cs_change = 0; // keep CS asserted, it is deasserted after the message
         current_offset += len;
         num_transfers++;
     }
+
+    printf("FPGA: sending %zu Bytes ...", bitstream_size);  //TODO implement with helper->Log()
+    fflush(stdout);
+    int msg_ret = fpgaMessage(&spi_fd, transfers, num_transfers, spiMode);
+    printf(msg_ret < 0 ? " failed\n" : " done\n");
+    fflush(stdout); // immediately write to console!
 
     // freeing allocated dynamic memory
     free(bitstream_payload);
     free(transfers);
 
-    printf("\n");
-    fflush(stdout); // immediately write to console!
-
-	// =========== END of bitstream-transmitting without deasserting ChipSelect ===========
-  
-    setFpgaChipSelectPin(false);
-
-    helper->DEBUG_SPI(DEBUGLEVEL_NORMAL, "Sending CMD_LSC_READ_STATUS");
-    status = fpgaLatticeReadData(&spi_fd, CMD_LSC_READ_STATUS);
-    if(helper->DEBUG_FPGA(DEBUGLEVEL_NORMAL)) {
-        fpgaLatticePrintBits(status);
+    if (msg_ret < 0) {
+        helper->Error("SPI-transmission failed\n");
+        if (bitstream_file) fclose(bitstream_file);
+        if (spi_fd >= 0) close(spi_fd);
+        return -5; // return Error-Code -5
     }
 
-    // Exit Programming Mode: send ISC_DISABLE
-    helper->DEBUG_SPI(DEBUGLEVEL_NORMAL, "Sending CMD_ISC_DISABLE");
-	fpgaLatticeSendCommand(&spi_fd, CMD_ISC_DISABLE, false, true);
+	// =========== END of bitstream-transmitting without deasserting ChipSelect ===========
 
-    helper->DEBUG_SPI(DEBUGLEVEL_NORMAL, "wait 100 ms");
-	usleep(100000); // wait 100 ms
-
-    // check Status-Bits
+    // Check the status while the FPGA is still in programming mode: after ISC_DISABLE it wakes up,
+    // the SPI pins belong to the gateware (OpenAudioFPGA: SPIBone, MISO '1') and the sysCONFIG
+    // status can no longer be read.
     helper->DEBUG_SPI(DEBUGLEVEL_NORMAL, "Sending CMD_LSC_READ_STATUS");
-	status = fpgaLatticeReadData(&spi_fd, CMD_LSC_READ_STATUS);
+    status = fpgaLatticeReadData(&spi_fd, CMD_LSC_READ_STATUS);
     if(helper->DEBUG_SPI(DEBUGLEVEL_NORMAL)) {
         fpgaLatticePrintBits(status);
     }
     bool cleanUpload =
-        ((status) & (1<<(8))) &&  // Bit 8 (DONE) must be 1
-        !((status) & (1<<(26)));  // Bit 26 (EXECUTION ERROR) must be 0
+        ((status) & (1<<(8))) &&   // Bit 8 (DONE) must be 1
+        !((status) & (1<<(13))) && // Bit 13 (Fail Flag) must be 0
+        !((status) & (1<<(26)));   // Bit 26 (EXECUTION ERROR) must be 0
+
+    // Exit Programming Mode: send ISC_DISABLE (no busy poll: the FPGA wakes up, reads go to the gateware)
+    helper->DEBUG_SPI(DEBUGLEVEL_NORMAL, "Sending CMD_ISC_DISABLE");
+	fpgaLatticeSendCommand(&spi_fd, CMD_ISC_DISABLE, false, false);
+
+    helper->DEBUG_SPI(DEBUGLEVEL_NORMAL, "wait 100 ms");
+	usleep(100000); // wait 100 ms
 
 	if (bitstream_file) fclose(bitstream_file);
 	if (spi_fd >= 0) close(spi_fd);
@@ -498,20 +492,32 @@ void SPI::toggleFpgaProgramnPin(uint32_t assertTime, uint32_t waitTime) {
     }
 }
 
-void SPI::setFpgaChipSelectPin(bool cs_state)
+// one raw SPI message to the FPGA over the control bus driver (bus state "config" only); the chip
+// select is asserted for the whole message
+int SPI::fpgaMessage(int* spi_fd, struct spi_ioc_transfer* xfers, uint32_t n, uint8_t mode)
 {
-    if (!this->state->raspi)
-    {
-        int fd = open("/sys/class/leds/cs_fpga/brightness", O_WRONLY);
-        if (cs_state) {
-            write(fd, "1", 1); // assert ChipSelect (sets the real pin to LOW)
-            helper->DEBUG_SPI(DEBUGLEVEL_VERBOSE, "asserted ChipSelect");
-        }else{
-            write(fd, "0", 1); // deassert ChipSelect (sets the real pin to HIGH)
-            helper->DEBUG_SPI(DEBUGLEVEL_VERBOSE, "deasserted ChipSelect");
-        }
-        close(fd);
-    }   
+    struct spibone_raw_message rm = {};
+    rm.xfers = (uint64_t)(uintptr_t)xfers;
+    rm.n_xfers = n;
+    rm.mode = mode;
+    return ioctl(*spi_fd, SPIBONE_IOC_RAW_MESSAGE, &rm);
+}
+
+// state of the control bus: SPIBONE_STATE_OFFLINE / _CONFIG / _ONLINE (see spibone_uapi.h)
+bool SPI::setFpgaBusState(uint32_t busState)
+{
+    int fd = open(SPI_DEVICE_FPGA, O_RDWR);
+    if (fd < 0) {
+        helper->Error("Could not open %s\n", SPI_DEVICE_FPGA);
+        return false;
+    }
+    int ret = ioctl(fd, SPIBONE_IOC_SET_STATE, &busState);
+    close(fd);
+    if (ret < 0) {
+        helper->Error("Could not set the state of %s to %u\n", SPI_DEVICE_FPGA, busState);
+        return false;
+    }
+    return true;
 }
 
 void SPI::setFpgaDonePin(bool state) {
@@ -541,9 +547,7 @@ int SPI::fpgaLatticeReadData(int* spi_fd, uint8_t cmd) {
     tx_buf[0] = cmd; // command
 
 	// transmit and read message (8 bytes in total)
-	setFpgaChipSelectPin(true); // assert ChipSelect
-    ioctl(*spi_fd, SPI_IOC_MESSAGE(1), &tr_cmd);    
-	setFpgaChipSelectPin(false); // deassert ChipSelect
+    fpgaMessage(spi_fd, &tr_cmd, 1, FPGA_LATTICE_SPI_MODE); // one chip-select frame
 
 	// copy desired data to 32-bit word
     int rx_data;
@@ -645,11 +649,9 @@ bool SPI::fpgaLatticeSendCommand(int* spi_fd, uint8_t cmd, bool keepCS, bool che
     tx_buf[0] = cmd; // command
 
 	// transmit message (4 bytes)
-	setFpgaChipSelectPin(true); // assert ChipSelect
-    int ret = ioctl(*spi_fd, SPI_IOC_MESSAGE(1), &tr_cmd);
-	if(!keepCS){
-		setFpgaChipSelectPin(false); // deassert ChipSelect
-	}
+    // keepCS: the chip select frames one message now; a transfer that has to follow under the same
+    // chip select has to go into the same message (see the bitstream burst)
+    int ret = fpgaMessage(spi_fd, &tr_cmd, 1, FPGA_LATTICE_SPI_MODE);
 	
 	// optional: wait until busy-flag is reset
 	if (checkBusyAndStatus) {
@@ -674,7 +676,7 @@ int SPI::fpgaLatticeTransferCommand(int* spi_fd, uint8_t cmd) {
     };
     tx_buf[0] = cmd; // command
 
-	return ioctl(*spi_fd, SPI_IOC_MESSAGE(1), &tr_cmd);
+	return fpgaMessage(spi_fd, &tr_cmd, 1, FPGA_LATTICE_SPI_MODE);
 };
 
 
@@ -878,29 +880,23 @@ int SPI::UploadBitstreamDsps(bool useCli) {
     return 0;
 }
 
+// control bus of the FPGA (registers of OpenAudioFPGA: routing, configuration, AES67) through the
+// spibone kernel driver
 bool SPI::OpenConnectionFpga()
 {
-    uint8_t spiMode = SPI_MODE_0; // user-program uses SPI MODE 0
-    uint8_t spiBitsPerWord = 8; // we are using standard 8-bit-mode here for communication
-    uint32_t spiSpeed = SPI_FPGA_SPEED_HZ;
-
-    if (state->raspi)
-    {
-        spiFpgaHandle = open("/dev/spidev0.0", O_RDWR);
-    }
-    else
-    {
-        spiFpgaHandle = open(SPI_DEVICE_FPGA, O_RDWR);
-    }
-
+    spiFpgaHandle = open(SPI_DEVICE_FPGA, O_RDWR);
     if (spiFpgaHandle < 0) {
-        helper->Error("Error: Could not open SPI-device (FPGA)\n");
+        helper->Error("Error: Could not open %s (FPGA control bus)\n", SPI_DEVICE_FPGA);
         return false;
     }
 
-    ioctl(spiFpgaHandle, SPI_IOC_WR_MODE, &spiMode);
-    ioctl(spiFpgaHandle, SPI_IOC_WR_BITS_PER_WORD, &spiBitsPerWord);
-    ioctl(spiFpgaHandle, SPI_IOC_WR_MAX_SPEED_HZ, &spiSpeed);
+    uint32_t info = 0, version = 0;
+    if (ReadFpgaRegister(FPGA_REG_CORE_INFO, &info) && ReadFpgaRegister(FPGA_REG_CORE_VERSION, &version)) {
+        helper->DEBUG_FPGA(DEBUGLEVEL_NORMAL, "OpenAudioFPGA version 0x%08x: platform %u, %u AES50, %s AES67, %u/%u TDM lines",
+            version, info >> 24, (info >> 16) & 0xf, ((info >> 20) & 1) ? "with" : "no", info & 0xff, (info >> 8) & 0xff);
+    } else {
+        helper->Error("FPGA control bus does not answer (is the gateware loaded?)\n");
+    }
     return true;
 }
 
@@ -957,25 +953,23 @@ bool SPI::CloseConnectionDsps() {
     return true;
 }
 
-bool SPI::SendFpgaData(uint8_t txData[], uint8_t rxData[], uint8_t len) {
-//    if (!connected) return false; // this line prevents SPI-communication at the moment
+// one 32 bit register of the FPGA control bus (byte address, see defines.h / OpenAudioFPGA csr.csv)
+bool SPI::WriteFpgaRegister(uint32_t addr, uint32_t value) {
+    struct spibone_wb_xfer x = {addr, value};
+    if (spiFpgaHandle < 0 || ioctl(spiFpgaHandle, SPIBONE_IOC_POKE, &x) < 0) {
+        helper->Error("FPGA: write 0x%08x to 0x%08x failed\n", value, addr);
+        return false;
+    }
+    return true;
+}
 
-    struct spi_ioc_transfer tr = {0};
-
-    // configure SPI-system for this transmission
-    tr.tx_buf = (unsigned long)txData;
-    tr.rx_buf = (unsigned long)rxData;
-    tr.bits_per_word = 8;
-    tr.delay_usecs = 0; // microseconds to delay after this transfer before (optionally) changing the chipselect status
-    tr.cs_change = 0; // disable CS between two messages
-    tr.len = len;
-    tr.speed_hz = SPI_FPGA_SPEED_HZ;
-
-    setFpgaChipSelectPin(true); // assert ChipSelect
-    int ret = ioctl(spiFpgaHandle, SPI_IOC_MESSAGE(1), &tr); // send via SPI
-	setFpgaChipSelectPin(false); // deassert ChipSelect
-
-    return (ret >= 0);
+bool SPI::ReadFpgaRegister(uint32_t addr, uint32_t* value) {
+    struct spibone_wb_xfer x = {addr, 0};
+    if (spiFpgaHandle < 0 || ioctl(spiFpgaHandle, SPIBONE_IOC_PEEK, &x) < 0) {
+        return false;
+    }
+    *value = x.val;
+    return true;
 }
 
 void SPI::QueueDspData(uint8_t dsp, uint8_t classId, uint8_t channel, uint8_t index, uint8_t valueCount, float values[]) {
