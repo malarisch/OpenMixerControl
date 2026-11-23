@@ -499,38 +499,41 @@ enum class MP_ID {
     DMX_ARTNET_VALUE = 279,
     //DMX_ARTNET_OFFSET,
 
+    OSC_FREQUENCY = 280,
+    OSC_LEVEL = 281,
+
     // AES67
-    AES67_ONLINE = 280,             // connection to aes67d is up
-    AES67_DISCOVERED_COUNT = 281,   // number of streams found on the network
-    AES67_DISCOVERED_STREAM = 282,  // stream descriptor "ip:port/channels/samples per packet"
-    AES67_DISCOVERED_NAME = 283,    // session name
-    AES67_INPUT_STREAM = 284,       // stream descriptor patched to an AES67 input ("" = none)
-    AES67_INPUT_NAME = 285,         // session name of that stream
-    AES67_INPUT_CHANNEL = 286,      // channel of that stream (zero based)
-    AES67_RX_DELAY = 287,           // receive delay (link offset beyond two packet times) in samples
-    AES67_TX_CHANNELS = 288,        // channels of a transmit stream (0 = stream is off)
-    AES67_TX_ADDRESS = 289,         // multicast address of a transmit stream ("" = automatic)
-    AES67_TX_NAME = 290,            // session name of a transmit stream ("" = automatic)
-    AES67_TX_ACTIVE_ADDRESS = 291,  // address the transmit stream is really sent to ("" = not sent)
+    AES67_ONLINE = 282,             // connection to aes67d is up
+    AES67_DISCOVERED_COUNT = 283,   // number of streams found on the network
+    AES67_DISCOVERED_STREAM = 284,  // stream descriptor "ip:port/channels/samples per packet"
+    AES67_DISCOVERED_NAME = 285,    // session name
+    AES67_INPUT_STREAM = 286,       // stream descriptor patched to an AES67 input ("" = none)
+    AES67_INPUT_NAME = 287,         // session name of that stream
+    AES67_INPUT_CHANNEL = 288,      // channel of that stream (zero based)
+    AES67_RX_DELAY = 289,           // receive delay (link offset beyond two packet times) in samples
+    AES67_TX_CHANNELS = 290,        // channels of a transmit stream (0 = stream is off)
+    AES67_TX_ADDRESS = 291,         // multicast address of a transmit stream ("" = automatic)
+    AES67_TX_NAME = 292,            // session name of a transmit stream ("" = automatic)
+    AES67_TX_ACTIVE_ADDRESS = 293,  // address the transmit stream is really sent to ("" = not sent)
 
     // configuration of the loaded core, read from it by the server (0 = not known, no connection)
-    AES67_TX_STREAMS = 292,         // transmit streams
-    AES67_TX_OUTPUTS = 293,         // transmit channels
-    AES67_RX_STREAMS = 294,         // receive streams
-    AES67_RX_INPUTS = 295,          // receive channels
-    AES67_RX_BUFFER = 296,          // samples the core buffers per receive channel
+    AES67_TX_STREAMS = 294,         // transmit streams
+    AES67_TX_OUTPUTS = 295,         // transmit channels
+    AES67_RX_STREAMS = 296,         // receive streams
+    AES67_RX_INPUTS = 297,          // receive channels
+    AES67_RX_BUFFER = 298,          // samples the core buffers per receive channel
 
     // state of the AES67 core and of ptp4l, for the setup page
-    AES67_CORE_ADDRESS = 297,       // IP address of the core ("" = not known)
-    AES67_PTP_STATE = 298,          // state of the PTP port, e.g. "Follower" ("" = ptp4l does not answer)
-    AES67_PTP_LEADER = 299,         // clock identity of the current leader (grandmaster)
-    AES67_PTP_OFFSET = 300,         // offset from the leader in ns
-    AES67_PTP_PATH_DELAY = 301,     // mean path delay in ns
-    AES67_PTP_FREQUENCY = 302,      // frequency correction in ppb, as ptp4l logs it
-    AES67_PTP_FREQUENCY_VALID = 303, // the frequency correction could be read
+    AES67_CORE_ADDRESS = 299,       // IP address of the core ("" = not known)
+    AES67_PTP_STATE = 300,          // state of the PTP port, e.g. "Follower" ("" = ptp4l does not answer)
+    AES67_PTP_LEADER = 301,         // clock identity of the current leader (grandmaster)
+    AES67_PTP_OFFSET = 302,         // offset from the leader in ns
+    AES67_PTP_PATH_DELAY = 303,     // mean path delay in ns
+    AES67_PTP_FREQUENCY = 304,      // frequency correction in ppb, as ptp4l logs it
+    AES67_PTP_FREQUENCY_VALID = 305, // the frequency correction could be read
 
     // Next free Number
-    __ELEMENT_COUNTER_DO_NOT_MOVE = 304
+    __ELEMENT_COUNTER_DO_NOT_MOVE = 306
 
 
     // !!!!!!!!!!!!!!!!!!!!  Danger Zone  !!!!!!!!!!!!!!!!!!

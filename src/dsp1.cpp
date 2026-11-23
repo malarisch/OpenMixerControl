@@ -344,7 +344,7 @@ void DSP1::SendGate(uint chanIndex)
 
     float samplerate = (float)config->GetUint(SAMPLERATE);
     float bufferrate = samplerate/(float)DSP_SAMPLES_IN_BUFFER;
-    float values[5];
+    float values[6];
 
     // threshold
     values[0] = (pow(2.0f, 31.0f) - 1.0f) * pow(10.0f, config->GetFloat(CHANNEL_GATE_TRESHOLD, chanIndex)/20.0f); // send threshold as linear value for 32-bit fixed point representation
@@ -366,22 +366,25 @@ void DSP1::SendGate(uint chanIndex)
     // we are using -2.19722 with an additional factor of 1000.0f converts ms -> seconds)
     values[4] = 1.0f - exp(-2197.22457734f/(samplerate * config->GetFloat(CHANNEL_GATE_RELEASE, chanIndex)));
 
-    spi->QueueDspData(0, 'g', chanIndex, 0, 5, &values[0]);
+    values[5] = config->GetBool(CHANNEL_GATE_ENABLE, chanIndex) ? 1.0f : 0.0f;
+
+    spi->QueueDspData(0, 'g', chanIndex, 0, 6, &values[0]);
 }
 
 void DSP1::SendLowcut(uint8_t chan)
 {
-    float values[1];
+    float values[2];
 
     // Source: https://www.dsprelated.com/showarticle/1769.php
     // alpha = 1 / (1 + 2 * pi * f_c * 1/f_s)
     // Equation for samples: output = alpha * (input + previous_output - previous_input)
     values[0] = 1.0f / (1.0f + 2.0f * M_PI * config->GetFloat(CHANNEL_LOWCUT_FREQ, chan) * (1.0f/(float)config->GetUint(SAMPLERATE)));
+    values[1] = config->GetBool(CHANNEL_LOWCUT_ENABLE, chan) ? 1.0f : 0.0f;
 
     helper->DEBUG_DSP1(DEBUGLEVEL_NORMAL, "SendLowcut() channelindex %d -> %f", chan, values[0]);
 
 
-    spi->QueueDspData(0, 'e', chan, 'l', 1, &values[0]);
+    spi->QueueDspData(0, 'e', chan, 'l', 2, &values[0]);
 }
 
 void DSP1::SendEQ(uint chanIndex)
@@ -455,7 +458,7 @@ void DSP1::SendCompressor(uint8_t chanIndex)
 
     using enum MP_ID;
 
-    float values[6];
+    float values[7];
 
     float samplerate = (float)config->GetUint(SAMPLERATE);
     float bufferrate = samplerate/(float)DSP_SAMPLES_IN_BUFFER;
@@ -481,7 +484,9 @@ void DSP1::SendCompressor(uint8_t chanIndex)
     // we are using -2.19722 with an additional factor of 1000.0f converts ms -> seconds)
     values[5] = 1.0f - exp(-2197.22457734f/(samplerate * config->GetFloat(CHANNEL_DYNAMICS_RELEASE, chanIndex)));
 
-    spi->QueueDspData(0, 'c', chanIndex, 0, 6, &values[0]);
+    values[6] = config->GetBool(CHANNEL_COMPRESSOR_ENABLE, chanIndex) ? 1.0f : 0.0f;
+
+    spi->QueueDspData(0, 'c', chanIndex, 0, 7, &values[0]);
 }
 
 void DSP1::SetInputDelay(uint chanIndex)
@@ -979,6 +984,7 @@ void DSP1::DSP2_SendFxParameter(int slotIdx)
 }
 
 void DSP1::DSP2_SetOscillator(uint8_t oscIndex, float frequency, float volumedB) {
+    if (oscIndex >= 2) { return; }
     dsp2Oscillator[oscIndex].frequency = frequency;
     dsp2Oscillator[oscIndex].volume = pow(10.0f, volumedB / 20.0f);
     DSP2_SendOscillatorValues();
